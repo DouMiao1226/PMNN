@@ -51,35 +51,26 @@ def data_test():
 
     return t_test, x_test, tx_test, tx_test_exact
 
-class Net_Attention(nn.Module):
+class Net(nn.Module):
     def __init__(self, layers):
-        super(Net_Attention, self).__init__()
+        super(Net, self).__init__()
         self.layers = layers
         self.iter = 0
         self.activation = nn.Tanh()
         self.loss_function = nn.MSELoss(reduction='mean')
         self.linear = nn.ModuleList([nn.Linear(layers[i], layers[i + 1]) for i in range(len(layers) - 1)])
-        self.attention1 = nn.Linear(layers[0], layers[1])
-        self.attention2 = nn.Linear(layers[0], layers[1])
         for i in range(len(layers) - 1):
+            # (self.linear[i].weight.data, gain(1.0))
             nn.init.xavier_normal_(self.linear[i].weight.data, gain=1.0)
             nn.init.zeros_(self.linear[i].bias.data)
-        nn.init.xavier_normal_(self.attention1.weight.data, gain=1.0)
-        nn.init.zeros_(self.attention1.bias.data)
-        nn.init.xavier_normal_(self.attention2.weight.data, gain=1.0)
-        nn.init.zeros_(self.attention2.bias.data)
 
     def forward(self, x):
         if not torch.is_tensor(x):
             x = torch.from_numpy(x)
         a = self.activation(self.linear[0](x))
-        encoder_1 = self.activation(self.attention1(x))
-        encoder_2 = self.activation(self.attention2(x))
-        a = a * encoder_1 + (1 - a) * encoder_2
         for i in range(1, len(self.layers) - 2):
             z = self.linear[i](a)
             a = self.activation(z)
-            a = a * encoder_1 + (1 - a) * encoder_2
         a = self.linear[-1](a)
         return a
 
@@ -242,7 +233,6 @@ class Model:
             line_search_fn="strong_wolfe"
         )
 
-
         start_time = time.time()
 
         self.optimizer_LBGFS.step(self.LBGFS_loss)
@@ -256,26 +246,19 @@ class Model:
         print('LBGFS==Training time: %.2f' % elapsed)
 
         save_error(self.error_collect)
-        save_loss(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
+        save_loss_fPINN(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
 
-        pred = self.train_U(tx_test).cpu().detach().numpy()
-        exact = self.tx_test_exact.cpu().detach().numpy()
-        error = np.linalg.norm(pred - exact, 2) / np.linalg.norm(exact, 2)
-        print('Test_L2error:', '{0:.2e}'.format(error))
-
-        elapsed = time.time() - start_time
-        print('Training time: %.2f' % elapsed)
         return error, elapsed, self.LBGFS_loss().item()
 
 def save_error(error_collect):
-    np.savetxt('loss/error_1D_PDE_L1.txt', error_collect)
+    np.savetxt('loss/error_1D_PDE_fPINN.txt', error_collect)
 
+def save_loss_fPINN(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
+    np.savetxt('loss/i_loss_1D_PDE_fPINN.txt', i_loss_collect)
+    np.savetxt('loss/b_loss_1D_PDE_fPINN.txt', b_loss_collect)
+    np.savetxt('loss/f_loss_1D_PDE_fPINN.txt', f_loss_collect)
+    np.savetxt('loss/total_loss_1D_PDE_fPINN.txt', total_loss)
 
-def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
-    np.savetxt('loss/i_loss_1D_PDE_L1.txt', i_loss_collect)
-    np.savetxt('loss/b_loss_1D_PDE_L1.txt', b_loss_collect)
-    np.savetxt('loss/f_loss_1D_PDE_L1.txt', f_loss_collect)
-    np.savetxt('loss/total_loss_1D_PDE_L1.txt', total_loss)
 
 def draw_exact():
     u_exact_np = tx_test_exact.cpu().detach().numpy()
@@ -290,7 +273,7 @@ def draw_exact():
     plt.ylabel('$x$')
     plt.title('Exact $u(t,x)$')
     plt.tight_layout()
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_exact.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_exact.png')
     plt.show()
 
 def draw_pred():
@@ -304,7 +287,7 @@ def draw_pred():
     plt.ylabel('$x$')
     plt.title('Pred $u(t,x)$')
     plt.tight_layout()
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_pred.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_pred.png')
     plt.show()
 
 def draw_error():
@@ -320,7 +303,7 @@ def draw_error():
     plt.ylabel('$x$')
     plt.title('Error')
     plt.tight_layout()
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_ERROR.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_ERROR.png')
     plt.show()
 
 def draw_error_1():
@@ -334,7 +317,7 @@ def draw_error_1():
     plt.ylabel('$x$')
     plt.title('Error')
     plt.tight_layout()
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_ERROR_1.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_ERROR_1.png')
     plt.show()
 
 def draw_some_t(t_num_index):
@@ -354,7 +337,7 @@ def draw_some_t(t_num_index):
     plt.ylabel('$u(t,x)$')
     # plt.title('$t = %.2f $' % (t_test[t_num_index]) + ' based on $L1$')
     plt.tight_layout()
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_t_' + str(t_test[t_num_index]) + 'NN_learn.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_t_' + str(t_test[t_num_index]) + 'NN_learn.png')
     plt.show()
 
 def draw_epoch_loss():
@@ -370,7 +353,7 @@ def draw_epoch_loss():
     plt.plot(b_loss_collect[:, 0], b_loss_collect[:, 1], 'g-', lw=2)
     plt.plot(f_loss_collect[:, 0], f_loss_collect[:, 1], 'r-', lw=2)
     plt.legend(['loss_i', 'loss_b', 'loss_f'], fontsize=12)
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_LOSS.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_LOSS.png')
     plt.show()
 
 def draw_epoch_loss_1():
@@ -383,7 +366,7 @@ def draw_epoch_loss_1():
     plt.ylabel('$Loss$')
     # plt.title('$Loss$ based on $L1$')
     plt.plot(i_loss_collect[:, 0], total_loss[:, 1], 'b-', lw=2)
-    plt.savefig('Figure/1D_PDE/1D_PDE_L1_LOSS_1.png')
+    plt.savefig('Figure/1D_PDE/1D_PDE_fPINN_LOSS_1.png')
     plt.show()
 
 if __name__ == '__main__':
@@ -393,11 +376,10 @@ if __name__ == '__main__':
     set_seed(1234)
 
     layers = [2, 20, 20, 20, 20, 20, 1]
-    # layers = [2, 40, 40, 40, 40, 40, 40, 40, 1]
     # layers = [2, 20, 20, 20, 20, 20, 20, 20, 1]
     # layers = [2, 10, 10, 10, 10, 10, 10, 10, 1]
-
-    net = is_cuda(Net_Attention(layers))
+    # layers = [2, 20, 20, 20, 1]
+    net = is_cuda(Net(layers))
 
     alpha = 0.5
     sigma = 1 - alpha / 2
@@ -433,7 +415,7 @@ if __name__ == '__main__':
 
     model.train(LBGFS_epochs=50000)
 
-    '''画图'''
+    # '''画图'''
     # plot_t = int(t_test_N / 3)
     # t_num_index = [0, plot_t, 2 * plot_t, t_test_N-1]
     # for i in range(4):
@@ -445,6 +427,5 @@ if __name__ == '__main__':
     # draw_error_1()
     # draw_epoch_loss()
     # draw_epoch_loss_1()
-    # # draw_lambada()
 
 

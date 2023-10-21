@@ -217,7 +217,6 @@ class Model:
         )
 
         start_time = time.time()
-
         self.optimizer_LBGFS.step(self.LBGFS_loss)
         print('LBGFS done!')
 
@@ -230,6 +229,7 @@ class Model:
         print('LBGFS==Training time: %.2f' % elapsed)
 
         save_loss(self.i_loss_collect, self.f_loss_collect, self.total_loss_collect)
+        save_error(self.error_collect)
 
         pred = self.train_U(t_test).cpu().detach().numpy()
         exact = self.t_test_exact.cpu().detach().numpy()
@@ -239,6 +239,9 @@ class Model:
         elapsed = time.time() - start_time
         print('Training time: %.2f' % elapsed)
         return error, elapsed, self.LBGFS_loss().item()
+
+def save_error(error_collect):
+    np.savetxt('loss/error_ODE_L1.txt', error_collect)
 
 def save_loss(i_loss_collect,  f_loss_collect, total_loss):
     np.savetxt('loss/i_loss_ODE_L1.txt', i_loss_collect)
@@ -307,14 +310,14 @@ if __name__ == '__main__':
     # torch.cuda.is_available()
     set_seed(1234)
 
-    layers = [1, 20, 20, 20, 20, 20, 1]
+    # layers = [1, 20, 20, 20, 20, 20, 1]
+    # layers = [1, 40, 40, 40, 40, 40, 40, 40, 1]
     # layers = [1, 20, 20, 20, 20, 20, 20, 20, 1]
     # layers = [1, 10, 10, 10, 10, 10, 10, 10, 1]
-    # layers = [1, 20, 20, 20, 1]
-
+    layers = [1, 40, 1]
     net = is_cuda(Net_Attention(layers))
 
-    alpha = 0.5
+    alpha = 0.75
     sigma = 1 - alpha / 2
 
     lb = np.array([0.0]) # low boundary
@@ -352,7 +355,7 @@ if __name__ == '__main__':
     print('Time: %.4f' % elapsed0)
 
     '''画图'''
-    draw_exact_pred()
-    draw_error()
-    draw_epoch_loss()
-    draw_epoch_loss_1()
+    # draw_exact_pred()
+    # draw_error()
+    # draw_epoch_loss()
+    # draw_epoch_loss_1()

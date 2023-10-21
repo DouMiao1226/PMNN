@@ -120,6 +120,7 @@ class Net_Attention(nn.Module):
             a = a * encoder_1 + (1 - a) * encoder_2
         a = self.linear[-1](a)
         return a
+
 class Model:
     def __init__(self, net, xy, xy_xlb, xy_xub, xy_ylb, xy_yub, t, lb, ub,
                  txy_test, txy_test_exact
@@ -284,7 +285,6 @@ class Model:
 
         return loss
 
-
     def calculate_loss(self):
         loss_i = torch.mean((self.train_U(self.txy_t0) - self.u_t0) ** 2)
         self.i_loss_collect.append([self.net.iter, loss_i.item()])
@@ -324,8 +324,7 @@ class Model:
         return loss
 
     def train(self, LBGFS_epochs=50000):
-        # self.optimizer_LBGFS = torch.optim.LBFGS(self.net.parameters(), lr=1,
-        #                                          max_iter=LBGFS_epochs)
+
         self.optimizer_LBGFS = torch.optim.LBFGS(
             self.net.parameters(),
             lr=1,
@@ -349,6 +348,7 @@ class Model:
         elapsed = time.time() - start_time
         print('LBGFS==Training time: %.2f' % elapsed)
 
+        save_error(self.error_collect)
         save_loss(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
 
         pred = self.train_U(txy_test).cpu().detach().numpy()
@@ -359,6 +359,10 @@ class Model:
         elapsed = time.time() - start_time
         print('Training time: %.2f' % elapsed)
         return error, elapsed, self.LBGFS_loss().item()
+
+
+def save_error(error_collect):
+    np.savetxt('loss/error_2D_PDE_L2-1_sigma.txt', error_collect)
 
 
 def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
@@ -490,7 +494,7 @@ if __name__ == '__main__':
     ub = np.array([1.0, 1.0, 1.0]) # up boundary t,x,y
 
     '''train data'''
-    t_N = 61
+    t_N = 21
     x_y_N = 11
 
     t, x, y, xy, xy_xlb, xy_xub, xy_ylb, xy_yub = data_train()

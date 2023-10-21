@@ -309,9 +309,15 @@ class Model:
         elapsed = time.time() - start_time
         print('LBGFS==Training time: %.2f' % elapsed)
 
+        save_error(self.error_collect)
         save_loss(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
 
         return error, elapsed, self.LBGFS_loss().item()
+
+
+def save_error(error_collect):
+    np.savetxt('loss/error_3D_PDE_L1.txt', error_collect)
+
 
 def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
     np.savetxt('loss/i_loss_3D_PDE_L1.txt', i_loss_collect)
@@ -346,7 +352,7 @@ def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
 #     plt.show()
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     use_gpu = True
     # use_gpu = False
     torch.cuda.is_available()
@@ -364,7 +370,7 @@ if __name__ == '__main__':
     ub = np.array([1.0, 1.0, 1.0, 1.0]) # up boundary t,x,y
 
     '''train data'''
-    t_N = 5
+    t_N = 31
     x_y_z_N = 11
 
     t, x, y, z, xyz, txyz_b = data_train()

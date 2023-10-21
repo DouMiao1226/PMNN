@@ -121,6 +121,29 @@ def data_test():
 
     return x_test, y_test, z_test, t_test, txyz_test, txyz_test_exact
 
+class Net(nn.Module):
+    def __init__(self, layers):
+        super(Net, self).__init__()
+        self.layers = layers
+        self.iter = 0
+        self.activation = nn.Tanh()
+        self.loss_function = nn.MSELoss(reduction='mean')
+        self.linear = nn.ModuleList([nn.Linear(layers[i], layers[i + 1]) for i in range(len(layers) - 1)])
+        for i in range(len(layers) - 1):
+            # (self.linear[i].weight.data, gain(1.0) )
+            nn.init.xavier_normal_(self.linear[i].weight.data, gain=1.0)
+            nn.init.zeros_(self.linear[i].bias.data)
+
+    def forward(self, x):
+        if not torch.is_tensor(x):
+            x = torch.from_numpy(x)
+        a = self.activation(self.linear[0](x))
+        for i in range(1, len(self.layers) - 2):
+            z = self.linear[i](a)
+            a = self.activation(z)
+        a = self.linear[-1](a)
+        return a
+
 class Net_Attention(nn.Module):
     def __init__(self, layers):
         super(Net_Attention, self).__init__()
@@ -331,15 +354,21 @@ class Model:
         elapsed = time.time() - start_time
         print('LBGFS==Training time: %.2f' % elapsed)
 
+        save_error(self.error_collect)
         save_loss(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
 
         return error, elapsed, self.LBGFS_loss().item()
 
+
+def save_error(error_collect):
+    np.savetxt('loss/error_3D_PDE_L2-1_sigma.txt', error_collect)
+
+
 def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
-    np.savetxt('loss/i_loss_3D_PDE_L1-2_sigma.txt', i_loss_collect)
-    np.savetxt('loss/b_loss_3D_PDE_L1-2_sigma.txt', b_loss_collect)
-    np.savetxt('loss/f_loss_3D_PDE_L1-2_sigma.txt', f_loss_collect)
-    np.savetxt('loss/total_loss_3D_PDE_L1-2_sigma.txt', total_loss)
+    np.savetxt('loss/i_loss_3D_PDE_L2-1_sigma.txt', i_loss_collect)
+    np.savetxt('loss/b_loss_3D_PDE_L2-1_sigma.txt', b_loss_collect)
+    np.savetxt('loss/f_loss_3D_PDE_L2-1_sigma.txt', f_loss_collect)
+    np.savetxt('loss/total_loss_3D_PDE_L2-1_sigma.txt', total_loss)
 
 
 # def draw_epoch_loss():
@@ -369,7 +398,7 @@ def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
 #     plt.show()
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
     use_gpu = True
     # use_gpu = False
     torch.cuda.is_available()
@@ -380,7 +409,8 @@ if __name__ == '__main__':
     # layers = [4, 20, 20, 20, 20, 20, 20, 20, 1]
     # layers = [4, 10, 10, 10, 10, 10, 10, 10, 1]
 
-    net = is_cuda(Net_Attention(layers))
+    net = is_cuda(Net(layers))
+    # net = is_cuda(Net_Attention(layers))
 
     alpha = 0.5
     sigma = 1 - alpha / 2
@@ -388,7 +418,7 @@ if __name__ == '__main__':
     ub = np.array([1.0, 1.0, 1.0, 1.0]) # up boundary t,x,y
 
     '''train data'''
-    t_N = 51
+    t_N = 31
     x_y_z_N = 11
 
     t, x, y, z, xyz, txyz_b = data_train()

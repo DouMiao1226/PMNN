@@ -256,11 +256,11 @@ class Model:
             pred_u = torch.from_numpy(pred_u).cpu()
             self.pred_u_collect.append([pred_u.tolist()])
 
+
         return loss
 
     def train(self, LBGFS_epochs=50000):
-        # self.optimizer_LBGFS = torch.optim.LBFGS(self.net.parameters(), lr=1,
-        #                                          max_iter=LBGFS_epochs)
+
         self.optimizer_LBGFS = torch.optim.LBFGS(
             self.net.parameters(),
             lr=1,
@@ -273,6 +273,7 @@ class Model:
         )
 
         start_time = time.time()
+
         self.optimizer_LBGFS.step(self.LBGFS_loss)
         print('LBGFS done!')
         pred = self.train_U(tx_test).cpu().detach().numpy()
@@ -283,6 +284,7 @@ class Model:
         elapsed = time.time() - start_time
         print('LBGFS==Training time: %.2f' % elapsed)
 
+        save_error(self.error_collect)
         save_loss(self.i_loss_collect, self.b_loss_collect, self.f_loss_collect, self.total_loss_collect)
 
         pred = self.train_U(tx_test).cpu().detach().numpy()
@@ -293,6 +295,10 @@ class Model:
         elapsed = time.time() - start_time
         print('Training time: %.2f' % elapsed)
         return error, elapsed, self.LBGFS_loss().item()
+
+
+def save_error(error_collect):
+    np.savetxt('loss/error_1D_PDE_L2-1_sigma.txt', error_collect)
 
 def save_loss(i_loss_collect, b_loss_collect, f_loss_collect, total_loss):
     np.savetxt('loss/i_loss_1D_PDE_L2-1_sigma.txt', i_loss_collect)
@@ -421,6 +427,7 @@ if __name__ == '__main__':
     # layers = [2, 10, 10, 10, 10, 10, 10, 10, 1]
 
     net = is_cuda(Net_Attention(layers))
+
 
     alpha = 0.5
     sigma = 1 - alpha / 2

@@ -80,7 +80,7 @@ def data_test():
     vector_x_test = np.vstack(np.expand_dims(X_test, axis=2))
     vector_y_test = np.vstack(np.expand_dims(Y_test, axis=2))
     xy_test = np.concatenate((vector_y_test, vector_x_test), axis=-1)
-    xy_test = xy_test.repeat(t_test_N, axis=0)
+    xy_test = np.tile(xy_test, (t_test_N, 1))
     t_vector_test = t_test.repeat(x_y_test_N * x_y_test_N, axis=0)
     t_vector_test = t_vector_test.reshape(x_y_test_N * x_y_test_N * t_test_N, 1)
     txy_test = np.concatenate((t_vector_test, xy_test), axis=-1)
